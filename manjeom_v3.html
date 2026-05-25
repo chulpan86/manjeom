@@ -49,11 +49,8 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;}
 body{font-family:var(--pretendard);background:#EDE6DF;color:var(--ink);display:flex;align-items:center;justify-content:center;min-height:100vh;-webkit-font-smoothing:antialiased;letter-spacing:-.02em;}
-.phone{position:relative;width:100%;max-width:412px;height:min(880px,100vh);background:var(--bg);overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);}
-@media(min-width:430px){.phone{border-radius:38px;height:880px;border:1px solid var(--line-2);}}
-
-.status{display:flex;justify-content:space-between;align-items:center;padding:14px 26px 6px;font-size:14px;font-weight:600;color:var(--ink);flex-shrink:0;}
-.status .right{display:flex;gap:7px;align-items:center;font-size:13px;}
+.phone{position:relative;width:100%;max-width:412px;height:min(880px,100vh);background:var(--bg);overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);padding-top:env(safe-area-inset-top);}
+@media(min-width:430px){.phone{border-radius:38px;height:880px;border:1px solid var(--line-2);padding-top:0;}}
 
 .screen{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
 .screen::-webkit-scrollbar{display:none;}
@@ -74,7 +71,7 @@ body{font-family:var(--pretendard);background:#EDE6DF;color:var(--ink);display:f
 .policy{font-size:12px;color:var(--ink-3);text-align:center;margin-top:20px;line-height:1.6;}
 
 /* header */
-.appbar{display:flex;align-items:center;justify-content:space-between;padding:6px 22px 14px;flex-shrink:0;}
+.appbar{display:flex;align-items:center;justify-content:space-between;padding:16px 22px 14px;flex-shrink:0;}
 .appbar .logo{display:flex;align-items:center;gap:9px;}
 .appbar .logo .lm{width:30px;height:30px;}
 .appbar .logo .nm{font-family:var(--serif);font-size:23px;color:var(--coral);letter-spacing:-.01em;}
@@ -270,8 +267,6 @@ body{font-family:var(--pretendard);background:#EDE6DF;color:var(--ink);display:f
 </head>
 <body>
 <div class="phone">
-  <div class="status"><span>10:05</span><span class="right">📶 &nbsp;🔋 84</span></div>
-
   <!-- LOGIN -->
   <div id="login" class="screen" style="overflow:hidden;">
     <div class="login-hero">
@@ -318,7 +313,7 @@ body{font-family:var(--pretendard);background:#EDE6DF;color:var(--ink);display:f
 
   <!-- RUN -->
   <div id="run" class="overlay">
-    <div class="ov-bar"><button class="back" id="runBack"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>
+    <div class="ov-bar" style="height:56px"></div>
     <div class="run-body" id="runBody"></div>
   </div>
 
@@ -651,7 +646,7 @@ body{font-family:var(--pretendard);background:#EDE6DF;color:var(--ink);display:f
     $('setMinus').onclick=function(){ if(st.sets>1){ st.sets--; $('setsNum').textContent=st.sets; updateSetsHint(); } };
     $('setPlus').onclick=function(){ if(st.sets<6){ st.sets++; $('setsNum').textContent=st.sets; updateSetsHint(); } };
     updateSetsHint();
-    $('startBtn').onclick=function(){ st.phase='focus'; st.round=1; startPhase(); };
+    $('startBtn').onclick=function(){ initAudio(); st.phase='focus'; st.round=1; startPhase(); };
     $('set').classList.add('show');
   }
   function updateSetsHint(){
@@ -672,13 +667,37 @@ body{font-family:var(--pretendard);background:#EDE6DF;color:var(--ink);display:f
   }
   function clearRunPersist(){ LS.del(RUN_KEY); }
 
-  // 진동 알림: 집중 완료는 또렷하게(짧게 3번), 휴식 완료는 부드럽게(2번). 약 1초 내외.
-  function buzz(kind){
-    if(!navigator.vibrate) return;
+  // ===== 알림: 진동(안드로이드) + 소리(iOS 포함 전 기종) =====
+  var audioCtx=null;
+  function initAudio(){
+    // 사용자 제스처(시작하기 탭) 시점에 오디오 컨텍스트를 깨워둔다 (자동재생 정책 대응)
     try{
-      if(kind==='focus') navigator.vibrate([220,120,220,120,220]); // 집중 끝: 똑-똑-똑
-      else navigator.vibrate([180,140,180]);                        // 휴식 끝: 똑-똑
+      if(!audioCtx){ var AC=window.AudioContext||window.webkitAudioContext; if(AC) audioCtx=new AC(); }
+      if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
     }catch(e){}
+  }
+  function beep(times, freq, gap){
+    if(!audioCtx) return;
+    try{
+      var t=audioCtx.currentTime;
+      for(var i=0;i<times;i++){
+        var o=audioCtx.createOscillator(), g=audioCtx.createGain();
+        o.type='sine'; o.frequency.value=freq;
+        var start=t+i*gap, dur=0.18;
+        g.gain.setValueAtTime(0, start);
+        g.gain.linearRampToValueAtTime(0.5, start+0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, start+dur);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(start); o.stop(start+dur+0.02);
+      }
+    }catch(e){}
+  }
+  function buzz(kind){
+    // 진동 (안드로이드 크롬 등)
+    if(navigator.vibrate){ try{ navigator.vibrate(kind==='focus'?[220,120,220,120,220]:[180,140,180]); }catch(e){} }
+    // 소리 (iOS Safari 포함)
+    if(kind==='focus') beep(3, 880, 0.26);  // 집중 끝: 높고 또렷하게 3번
+    else beep(2, 620, 0.28);                 // 휴식 끝: 낮게 2번
   }
 
   function startPhase(){
@@ -779,6 +798,7 @@ body{font-family:var(--pretendard);background:#EDE6DF;color:var(--ink);display:f
   }
   function onVisible(){
     if(document.hidden) return;
+    if(audioCtx && audioCtx.state==='suspended'){ try{ audioCtx.resume(); }catch(e){} }
     if(st.running && !st.done){
       st.remain=Math.max(0,Math.round((st.endAt-Date.now())/1000));
       if(st.remain<=0){ st.remain=0; phaseEnd(); } else { paintRun(); }
@@ -849,7 +869,7 @@ body{font-family:var(--pretendard);background:#EDE6DF;color:var(--ink);display:f
     Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(el){ el.onclick=function(){ switchTab(el.getAttribute('data-tab')); }; });
     $('profileBtn').onclick=openSheet; $('profileBtn2').onclick=openSheet;
     $('sheetMask').onclick=closeSheet; $('addMask').onclick=closeAddSheet;
-    $('setBack').onclick=closeSet; $('runBack').onclick=function(){ closeRun(); };
+    $('setBack').onclick=closeSet;
     $('editBtn').onclick=function(){ if(editMode) exitEdit(); else enterEdit(); };
     $('logoutItem').onclick=function(){ closeSheet(); store.user=null; save(); $('home').classList.add('hidden'); $('stats').classList.add('hidden'); $('tabbar').classList.add('hidden'); $('login').classList.remove('hidden'); $('nameInput').value=''; };
     $('resetItem').onclick=function(){ if(!confirm('모든 집중 기록을 초기화할까요? 되돌릴 수 없습니다.'))return; store.totals={}; store.sessions={}; store.custom=[]; store.days={}; store.order=null; store.removed=[]; save(); closeSheet(); toast('기록을 초기화했어요'); switchTab('home'); };
