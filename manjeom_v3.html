@@ -256,6 +256,16 @@ body{font-family:var(--pretendard);background:#EDE6DF;color:var(--ink);display:f
 .add-save{width:100%;height:56px;background:var(--coral);color:#fff;border:none;border-radius:16px;font-size:16px;font-weight:700;cursor:pointer;transition:transform .12s,background .2s;}
 .add-save:active{transform:scale(.98);background:var(--coral-d);}
 .add-save:disabled{background:var(--line-2);color:var(--ink-3);cursor:default;}
+.install-icon{display:flex;justify-content:center;margin-bottom:18px;}
+.install-icon span{width:62px;height:62px;display:block;}
+.install-icon span svg{width:100%;height:100%;}
+.istep{display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid var(--line);}
+.istep:last-of-type{border-bottom:none;}
+.istep .num{width:30px;height:30px;border-radius:50%;background:var(--coral);color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.istep .tx{font-size:15px;color:var(--ink-2);line-height:1.45;}
+.istep .tx b{color:var(--coral-d);font-weight:700;}
+.istep .tx .ic{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:1.5px solid var(--ink-3);border-radius:5px;vertical-align:-5px;margin:0 1px;}
+.istep .tx .ic svg{width:13px;height:13px;}
 
 .toast{position:absolute;left:50%;bottom:100px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:13.5px;font-weight:600;padding:12px 20px;border-radius:14px;z-index:60;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -330,6 +340,7 @@ body{font-family:var(--pretendard);background:#EDE6DF;color:var(--ink);display:f
     <div class="prof"><div class="av" id="sheetAv">나</div><div><div class="nm" id="sheetName">사용자</div><div class="em" id="sheetEmail">1만점과 함께하는 중</div></div></div>
     <div class="sheet-item"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="sl">누적 집중 시간</div><div class="sv" id="sheetTotal">0시간</div></div>
     <div class="sheet-item"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div class="sl">완료한 집중</div><div class="sv" id="sheetSessions">0회</div></div>
+    <div class="sheet-item" id="installItem"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M12 7v6"/><path d="M9.5 10.5L12 13l2.5-2.5"/></svg></div><div class="sl">홈 화면에 추가하기</div></div>
     <div class="sheet-item" id="resetItem"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div><div class="sl">기록 초기화</div></div>
     <div class="sheet-item danger" id="logoutItem"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></div><div class="sl">로그아웃</div></div>
   </div>
@@ -348,6 +359,18 @@ body{font-family:var(--pretendard);background:#EDE6DF;color:var(--ink);display:f
     <div class="add-field-label">색상</div>
     <div class="color-row" id="colorRow"></div>
     <button class="add-save" id="addSave" disabled>추가하기</button>
+  </div>
+
+  <!-- INSTALL GUIDE SHEET -->
+  <div class="sheet-mask" id="installMask"></div>
+  <div class="sheet" id="installSheet">
+    <div class="grab"></div>
+    <div class="install-icon"><span id="logoMark2"></span></div>
+    <div class="add-title">홈 화면에 추가하기</div>
+    <div class="add-desc">앱처럼 한 번에 열 수 있어요.<br>아래 기기에 맞는 방법을 따라 해주세요.</div>
+    <div class="seg" id="installSeg" style="margin-bottom:22px;"><button data-os="ios" class="on">아이폰</button><button data-os="aos">안드로이드</button></div>
+    <div id="installSteps"></div>
+    <button class="add-save" id="installDone" style="margin-top:8px;">확인했어요</button>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -476,12 +499,54 @@ body{font-family:var(--pretendard);background:#EDE6DF;color:var(--ink);display:f
 
   // ============ LOGIN ============
   function initLogin(){
-    $('brandMark').innerHTML=brandSVG(); $('logoMark').innerHTML=brandSVG();
+    $('brandMark').innerHTML=brandSVG(); $('logoMark').innerHTML=brandSVG(); $('logoMark2').innerHTML=brandSVG();
     $('nameBtn').onclick=function(){ doLogin($('nameInput').value.trim()||'집중러'); };
     $('nameInput').addEventListener('keydown',function(e){ if(e.key==='Enter') $('nameBtn').click(); });
   }
-  function doLogin(name){ store.user={name:name, joined:(store.user&&store.user.joined)||Date.now()}; save(); $('login').classList.add('hidden'); showApp(); }
+  function doLogin(name){
+    var firstTime = !store.user;
+    store.user={name:name, joined:(store.user&&store.user.joined)||Date.now()};
+    save(); $('login').classList.add('hidden'); showApp();
+    // 처음 시작한 사용자에게 홈 화면 추가 안내를 한 번 노출
+    if(firstTime && !store.installSeen){ setTimeout(function(){ openInstall(true); },600); }
+  }
   function showApp(){ $('tabbar').classList.remove('hidden'); switchTab('home'); renderProfileBtns(); }
+
+  // ===== 홈 화면 추가 안내 시트 =====
+  var installOS='ios';
+  function installStepsHTML(os){
+    var shareIcon='<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></span>';
+    var menuIcon='<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2.4" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></span>';
+    var steps;
+    if(os==='ios'){
+      steps=[
+        '<b>Safari</b>로 이 페이지를 열어주세요',
+        '하단의 '+shareIcon+' <b>공유</b> 버튼을 눌러요',
+        '메뉴에서 <b>홈 화면에 추가</b>를 선택해요',
+        '오른쪽 위 <b>추가</b>를 누르면 끝!'
+      ];
+    } else {
+      steps=[
+        '<b>Chrome</b>으로 이 페이지를 열어주세요',
+        '오른쪽 위 '+menuIcon+' <b>메뉴</b>를 눌러요',
+        '<b>홈 화면에 추가</b>를 선택해요',
+        '<b>추가</b>를 누르면 끝!'
+      ];
+    }
+    var h='';
+    steps.forEach(function(s,i){ h+='<div class="istep"><div class="num">'+(i+1)+'</div><div class="tx">'+s+'</div></div>'; });
+    return h;
+  }
+  function renderInstall(){ $('installSteps').innerHTML=installStepsHTML(installOS); var bs=$('installSeg').querySelectorAll('button'); Array.prototype.forEach.call(bs,function(b){ b.classList.toggle('on', b.getAttribute('data-os')===installOS); }); }
+  function openInstall(auto){
+    // 기기 추정으로 기본 탭 선택
+    var ua=(navigator.userAgent||'').toLowerCase();
+    installOS = /android/.test(ua) ? 'aos' : 'ios';
+    renderInstall();
+    $('installMask').classList.add('show'); $('installSheet').classList.add('show');
+    if(auto){ store.installSeen=true; save(); }
+  }
+  function closeInstall(){ $('installMask').classList.remove('show'); $('installSheet').classList.remove('show'); }
 
   function renderProfileBtns(){ var i=initial(store.user?store.user.name:'나'); $('profileBtn').textContent=i; $('profileBtn2').textContent=i; }
   function openSheet(){ var u=store.user||{}; $('sheetAv').textContent=initial(u.name); $('sheetName').textContent=u.name||'사용자'; $('sheetEmail').textContent='1만점과 함께하는 중'; $('sheetTotal').textContent=fmtHonly(totalAll()); $('sheetSessions').textContent=totalSess()+'회'; $('sheetMask').classList.add('show'); $('sheet').classList.add('show'); }
@@ -869,6 +934,10 @@ body{font-family:var(--pretendard);background:#EDE6DF;color:var(--ink);display:f
     Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(el){ el.onclick=function(){ switchTab(el.getAttribute('data-tab')); }; });
     $('profileBtn').onclick=openSheet; $('profileBtn2').onclick=openSheet;
     $('sheetMask').onclick=closeSheet; $('addMask').onclick=closeAddSheet;
+    $('installMask').onclick=closeInstall;
+    $('installDone').onclick=closeInstall;
+    $('installItem').onclick=function(){ closeSheet(); setTimeout(function(){ openInstall(false); },220); };
+    Array.prototype.forEach.call($('installSeg').querySelectorAll('button'),function(b){ b.onclick=function(){ installOS=b.getAttribute('data-os'); renderInstall(); }; });
     $('setBack').onclick=closeSet;
     $('editBtn').onclick=function(){ if(editMode) exitEdit(); else enterEdit(); };
     $('logoutItem').onclick=function(){ closeSheet(); store.user=null; save(); $('home').classList.add('hidden'); $('stats').classList.add('hidden'); $('tabbar').classList.add('hidden'); $('login').classList.remove('hidden'); $('nameInput').value=''; };
